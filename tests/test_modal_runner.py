@@ -8,15 +8,15 @@ from src import modal_runner
 
 
 class ModalRunnerTests(unittest.TestCase):
-    def test_checkpoint_uses_six_hardcoded_inputs(self) -> None:
-        self.assertEqual(len(modal_runner.TEST_INPUTS), 6)
+    def test_checkpoint_uses_three_to_five_hardcoded_inputs(self) -> None:
+        self.assertGreaterEqual(len(modal_runner.TEST_INPUTS), 3)
+        self.assertLessEqual(len(modal_runner.TEST_INPUTS), 5)
         self.assertEqual(
             modal_runner.TEST_INPUTS,
             [
                 (80.00, "regular", 2),
                 (120.00, "member", 3),
                 (200.00, "vip", 5),
-                (150.00, "member", 12),
                 (100.00, "vip", 1),
                 (101.00, "vip", 10),
             ],
