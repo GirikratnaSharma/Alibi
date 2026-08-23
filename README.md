@@ -38,7 +38,7 @@ Pure functions only: same input → same output, no DB calls, no timestamps, no 
 ## Teammates
 
 - [Girikratna Sharma](https://github.com/GirikratnaSharma)
-- [Kartik Setti](https://github.com/karthikeyansett1)
+- [Karthikeyan Setti](https://github.com/karthikeyansett1)
 - [Hritik Munde](https://github.com/hritikmunde)
 
 ## Setup
