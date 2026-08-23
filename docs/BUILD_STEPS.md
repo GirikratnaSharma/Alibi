@@ -65,8 +65,12 @@ provide pipeline input.
 **Stop and demo-test here.** Once steps 1–7 work end to end on the hardcoded path, you have a complete, honest demo. Everything below is upside, not required.
 
 ## Step 8 — Only after 1–7 work end to end
-- Keep Greptile PR review separate from the hardcoded Alibi pipeline
-- If time remains: wire in Claude-Mem so repeat verifications on similar code visibly recall prior context instead of starting cold — this is the "warm boot / speed" angle for the demo
+- [x] Add a focused GitHub PR entry point for `calculate_discount`
+- [x] Discover real callers deterministically with Python AST
+- [x] Pass optional Greptile PR-review comments to the input generator as advisory context
+- [x] Generate 3–5 schema-constrained inputs with Codex and validate them before execution
+- [x] Run immutable PR base/head sources through Modal and the deterministic diff
+- [x] Wire optional Claude-Mem recall/store around divergence classification
 
 ## Guardrails (don't scope-creep into these during the hackathon)
 - No side-effect tracking (DB writes, emails, API calls) — return-value comparison only

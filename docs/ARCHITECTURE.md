@@ -8,7 +8,7 @@ Each layer is built on top of the one below it. Layer 2 (the diff engine) is the
 flowchart BT
     L1["1. Foundation<br/>pure function: same input → same output, every time"]
     L2["2. Diff engine<br/>deterministic equality check — NO AI HERE"]
-    L3["3. Greptile<br/>finds real call sites of the changed function"]
+    L3["3. Git AST + Greptile review<br/>finds callers deterministically; review is advisory"]
     L4["4. Modal<br/>runs OLD code + NEW code in isolated sandboxes"]
     L5["5. Codex<br/>generates the code change from a plain-English ticket"]
     L6["6. Judgment (LLM)<br/>does each CONFIRMED divergence match ticket intent?"]
@@ -24,8 +24,8 @@ flowchart BT
 ```mermaid
 flowchart TD
     T["Ticket (plain English)"] --> CX["Codex writes the code change"]
-    CX --> GR["Greptile finds real callers of the changed function(s)"]
-    GR --> IG["LLM generates realistic test inputs from those real usages"]
+    CX --> GR["Git AST finds callers; Greptile adds optional PR-review context"]
+    GR --> IG["LLM generates schema-constrained inputs from those usages"]
 
     IG --> MO["Modal: run OLD code"]
     IG --> MN["Modal: run NEW code"]
@@ -72,7 +72,8 @@ This is the only zone where every layer above is unambiguously true with zero ca
 | Layer | Tool | Role |
 |---|---|---|
 | Code generation | OpenAI Codex | Writes the fix from the ticket |
-| Usage discovery | Greptile (API) | Finds real call sites of the changed function |
+| Usage discovery | Git + Python AST | Finds executable call sites deterministically |
+| PR review context | Greptile | Adds optional advisory review comments from GitHub |
 | Sandboxed execution | Modal | Runs OLD and NEW code in isolation, returns outputs |
 | Diff engine | Plain Python/TypeScript | Deterministic structural equality check |
 | Test input generation | LLM (Claude or GPT) | Turns real usage patterns into concrete test inputs |

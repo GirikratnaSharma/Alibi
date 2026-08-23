@@ -126,6 +126,9 @@ def run_source_in_sandbox(
             app=app,
             image=image,
             timeout=SANDBOX_TIMEOUT_SECONDS,
+            block_network=True,
+            cpu=1.0,
+            memory=256,
         )
         _write_sandbox_file(sandbox, "/tmp/pricing.py", function_source)
         _write_sandbox_file(sandbox, "/tmp/driver.py", DRIVER_SOURCE)

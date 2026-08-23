@@ -62,10 +62,28 @@ JSON. Greptile deprecated its codebase Query API and directed the project to PR
 review instead, so Greptile review is shown only as a side-by-side comparison
 and never feeds Alibi's pipeline.
 
+## Verify a pull request
+
+The PR-driven demo reads immutable base/head SHAs and Greptile-authored review
+comments from GitHub, discovers Python callers with the AST, asks Codex for
+3–5 schema-constrained inputs, runs both revisions in Modal, and sends only
+confirmed deterministic divergences to the classifier:
+
+```bash
+./.venv/bin/python -m src.pr_pipeline --pr 123
+```
+
+This path deliberately supports only a PR whose sole changed function in
+`demo-repo/pricing.py` is `calculate_discount`. Greptile context is advisory:
+the PR remains verifiable when no Greptile comment has arrived, and Greptile
+never participates in output comparison.
+
 ## Status
 
-The hardcoded Steps 1–7 pipeline works end to end. Greptile PR review remains a
-separate demo comparison.
+The hardcoded Steps 1–7 pipeline works end to end. A focused PR-driven path now
+connects GitHub metadata, optional Greptile review context, Codex-generated
+inputs, Modal execution, deterministic diffing, verdict classification, and
+optional Claude-Mem recall.
 
 ---
 
