@@ -25,7 +25,10 @@ def calculate_discount(
     if item_count >= 10:
         discount_rate += 0.05
 
-    discount_rate = min(discount_rate, 0.20)
+    # Normalize the rate after combining discounts. Without this, values such as
+    # 0.10 + 0.05 surface as 0.15000000000000002 and make exact differential
+    # comparisons noisy even though the business rate is exactly 15%.
+    discount_rate = round(min(discount_rate, 0.20), 2)
     discount_amount = round(order_total * discount_rate, 2)
     final_total = round(order_total - discount_amount, 2)
 
