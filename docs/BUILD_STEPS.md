@@ -28,6 +28,20 @@ Build or curate a small codebase with one clean **pure function** to modify — 
 - Confirm this works standalone, with a plain script, before wiring it into anything else
 - If it stalls: hardcode 3–5 representative call sites manually and move on — don't let this block step 4
 
+Standalone checkpoint command:
+
+```bash
+export GREPTILE_API_KEY="..."
+python3 src/greptile_call_sites.py --function calculate_discount
+```
+
+The script queries `GirikratnaSharma/Alibi` on `main`, asks Greptile to focus on
+usages related to `demo-repo/`, and emits structured JSON. It uses
+`GITHUB_TOKEN` when present, otherwise the active GitHub CLI credential. Keep
+both tokens out of the repository. The request/response integration is covered
+by unit tests; the checkpoint is complete only after the command succeeds
+against the live, indexed repository.
+
 ## Step 4 — Modal runs OLD vs NEW  *(high-risk unknown — test in isolation first)*
 - Two isolated sandboxes: one loads the pre-Codex function, one loads the post-Codex function
 - Start with **3–5 hardcoded test inputs** — skip auto-generation entirely for now

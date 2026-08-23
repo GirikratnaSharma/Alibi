@@ -43,11 +43,29 @@ Pure functions only: same input → same output, no DB calls, no timestamps, no 
 
 ## Setup
 
-TBD — setup instructions will be added once the language/framework choices for the pipeline are finalized.
+The current checkpoints use Python's standard library, so no package install is
+required. Run all local tests with:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Step 3 requires a Greptile API key. Create one in Greptile, export it as
+`GREPTILE_API_KEY`, and run:
+
+```bash
+python3 src/greptile_call_sites.py --function calculate_discount
+```
+
+The script reuses the authenticated GitHub CLI token unless `GITHUB_TOKEN` is
+explicitly provided. It never writes either credential to disk or includes it
+in output.
 
 ## Status
 
-Scaffold only — pipeline implementation has not started yet.
+Steps 1–2 are implemented. Step 3's standalone Greptile integration and local
+contract tests are implemented; live verification requires a Greptile API key
+and an indexed repository.
 
 ---
 
