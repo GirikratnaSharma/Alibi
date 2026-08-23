@@ -1,0 +1,39 @@
+{
+  "repository": "GirikratnaSharma/Alibi",
+  "branch": "main",
+  "function": "calculate_discount",
+  "source": "hardcoded_fallback",
+  "reason": "Greptile API key is not available; these locations were manually verified.",
+  "call_sites": [
+    {
+      "path": "tests/test_pricing.py",
+      "line_start": 55,
+      "line_end": 55,
+      "summary": "Runs the four hand-computed pricing cases through the function."
+    },
+    {
+      "path": "tests/test_pricing.py",
+      "line_start": 60,
+      "line_end": 60,
+      "summary": "Checks a VIP order exactly at the new-discount boundary."
+    },
+    {
+      "path": "tests/test_pricing.py",
+      "line_start": 68,
+      "line_end": 68,
+      "summary": "Checks a VIP bulk order above the boundary and at the cap."
+    },
+    {
+      "path": "tests/test_pricing.py",
+      "line_start": 78,
+      "line_end": 78,
+      "summary": "Captures the first result used by the determinism check."
+    },
+    {
+      "path": "tests/test_pricing.py",
+      "line_start": 81,
+      "line_end": 81,
+      "summary": "Repeats the same invocation to confirm stable output."
+    }
+  ]
+}

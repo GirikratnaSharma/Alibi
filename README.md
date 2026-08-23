@@ -50,22 +50,21 @@ required. Run all local tests with:
 python3 -m unittest discover -s tests -v
 ```
 
-Step 3 requires a Greptile API key. Create one in Greptile, export it as
-`GREPTILE_API_KEY`, and run:
+Step 3 currently uses the build plan's manual fallback because a Greptile API
+key is not available. Run the standalone checkpoint with:
 
 ```bash
 python3 src/greptile_call_sites.py --function calculate_discount
 ```
 
-The script reuses the authenticated GitHub CLI token unless `GITHUB_TOKEN` is
-explicitly provided. It never writes either credential to disk or includes it
-in output.
+The script validates five checked-in source locations and emits structured
+JSON. The real Greptile API function is retained only as an explicit TODO and
+does not return a mocked response.
 
 ## Status
 
-Steps 1–2 are implemented. Step 3's standalone Greptile integration and local
-contract tests are implemented; live verification requires a Greptile API key
-and an indexed repository.
+Steps 1–3 are implemented on the hardcoded checkpoint path. Live Greptile
+verification remains pending an API key and indexed repository.
 
 ---
 
