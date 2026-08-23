@@ -15,7 +15,7 @@ from src.diff_engine import compare_results
 from src.divergence_classifier import classify_divergence
 from src.github_pr import ensure_commit, load_greptile_review, load_pull_request
 from src.input_generator import generate_inputs
-from src.inspect_change import inspect_change
+from src.inspect_change import changed_lines_by_side, inspect_change
 from src.modal_runner import PRICING_PATH, REPOSITORY_ROOT, run_old_vs_new
 from src.verdict import aggregate_verdict, format_report
 
@@ -57,6 +57,71 @@ def function_source(source: str, function_name: str) -> str:
     if not extracted:
         raise RuntimeError(f"Could not extract function {function_name}")
     return extracted
+
+
+def function_line_range(source: str, function_name: str) -> set[int]:
+    """Return all physical lines owned by exactly one named function."""
+    tree = ast.parse(source)
+    matches = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == function_name
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected exactly one function named {function_name}; found {len(matches)}"
+        )
+    node = matches[0]
+    return set(range(node.lineno, (node.end_lineno or node.lineno) + 1))
+
+
+def validate_pr_scope(
+    pr: Mapping[str, Any],
+    change: Mapping[str, Any],
+    old_source: str,
+    new_source: str,
+) -> list[str]:
+    """Prove the focused verifier covers every allowed production-code change."""
+    changed_paths = {item["path"] for item in pr["files"]}
+    allowed_paths = {
+        PRICING_PATH.as_posix(),
+        "tests/test_pricing.py",
+    }
+    unsupported = sorted(
+        path
+        for path in changed_paths
+        if path not in allowed_paths
+        and not (path.startswith("demo-repo/tickets/") and path.endswith(".md"))
+    )
+    if unsupported:
+        raise RuntimeError(
+            "PR changes files outside the focused verifier scope: "
+            + ", ".join(unsupported)
+        )
+
+    files = change.get("files", [])
+    if not isinstance(files, list) or len(files) != 1:
+        raise RuntimeError("Expected one inspected pricing file")
+    functions = files[0].get("functions", [])
+    names = [item.get("name") for item in functions if isinstance(item, dict)]
+    if names != ["calculate_discount"]:
+        raise RuntimeError(
+            "The PR-driven demo requires calculate_discount to be the only changed "
+            f"function in {PRICING_PATH}; found {names}"
+        )
+
+    diff = files[0].get("diff")
+    if not isinstance(diff, str) or not diff:
+        raise RuntimeError("The pricing change has no inspectable diff")
+    old_changed, new_changed = changed_lines_by_side(diff)
+    old_range = function_line_range(old_source, "calculate_discount")
+    new_range = function_line_range(new_source, "calculate_discount")
+    if not old_changed.issubset(old_range) or not new_changed.issubset(new_range):
+        raise RuntimeError(
+            "pricing.py contains changed lines outside calculate_discount"
+        )
+    return ["calculate_discount"]
 
 
 def find_callers(revision: str, function_name: str) -> list[dict[str, Any]]:
@@ -147,15 +212,9 @@ def run_pr_pipeline(
         PRICING_PATH,
         target=pr["head_sha"],
     )
-    names = [item["name"] for item in change["files"][0]["functions"]]
-    if names != ["calculate_discount"]:
-        raise RuntimeError(
-            "The PR-driven demo requires calculate_discount to be the only changed "
-            f"function in {PRICING_PATH}; found {names}"
-        )
-
     old_source = source_at(pr["base_sha"], PRICING_PATH)
     new_source = source_at(pr["head_sha"], PRICING_PATH)
+    names = validate_pr_scope(pr, change, old_source, new_source)
     callers = find_callers(pr["head_sha"], "calculate_discount")
     if not callers:
         raise RuntimeError("No executable calculate_discount callers were found")

@@ -5,7 +5,12 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from src.pr_pipeline import find_callers, function_source, run_pr_pipeline
+from src.pr_pipeline import (
+    find_callers,
+    function_source,
+    run_pr_pipeline,
+    validate_pr_scope,
+)
 
 
 class PullRequestPipelineTests(unittest.TestCase):
@@ -29,6 +34,42 @@ def calculate_discount(total, customer, count):
         self.assertIn("demo-repo/checkout.py", paths)
         self.assertIn("demo-repo/order_service.py", paths)
         self.assertTrue(all("calculate_discount(" in item["excerpt"] for item in callers))
+
+    def test_scope_rejects_unverified_source_file(self) -> None:
+        pr = {
+            "files": [
+                {"path": "demo-repo/pricing.py"},
+                {"path": "src/unverified.py"},
+            ]
+        }
+        source = "def calculate_discount(a, b, c):\n    return {}\n"
+        change = {
+            "files": [
+                {
+                    "functions": [{"name": "calculate_discount"}],
+                    "diff": "@@ -1,2 +1,2 @@\n def calculate_discount(a, b, c):\n-    return {1: 1}\n+    return {}\n",
+                }
+            ]
+        }
+
+        with self.assertRaisesRegex(RuntimeError, "outside the focused"):
+            validate_pr_scope(pr, change, source, source)
+
+    def test_scope_rejects_module_level_pricing_change(self) -> None:
+        pr = {"files": [{"path": "demo-repo/pricing.py"}]}
+        old_source = "RATE = 1\n\ndef calculate_discount(a, b, c):\n    return {}\n"
+        new_source = old_source.replace("RATE = 1", "RATE = 2")
+        change = {
+            "files": [
+                {
+                    "functions": [{"name": "calculate_discount"}],
+                    "diff": "@@ -1 +1 @@\n-RATE = 1\n+RATE = 2\n",
+                }
+            ]
+        }
+
+        with self.assertRaisesRegex(RuntimeError, "outside calculate_discount"):
+            validate_pr_scope(pr, change, old_source, new_source)
 
     @patch("src.pr_pipeline.load_pull_request")
     @patch("src.pr_pipeline.ensure_commit")
@@ -61,7 +102,16 @@ def calculate_discount(total, customer, count):
             "files": [{"path": "demo-repo/pricing.py"}],
         }
         inspect.return_value = {
-            "files": [{"functions": [{"name": "calculate_discount"}]}]
+            "files": [
+                {
+                    "functions": [{"name": "calculate_discount"}],
+                    "diff": (
+                        "@@ -2 +2 @@\n"
+                        "-    return {\"discount_rate\": 0.15}\n"
+                        "+    return {\"discount_rate\": 0.2}\n"
+                    ),
+                }
+            ]
         }
         old_source = """\
 def calculate_discount(order_total, customer_type, item_count):

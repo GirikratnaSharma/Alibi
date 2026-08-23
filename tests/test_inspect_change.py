@@ -9,7 +9,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from inspect_change import changed_new_lines, inspect_change  # noqa: E402
+from inspect_change import (  # noqa: E402
+    changed_lines_by_side,
+    changed_new_lines,
+    inspect_change,
+)
 
 
 class InspectChangeTests(unittest.TestCase):
@@ -21,6 +25,15 @@ class InspectChangeTests(unittest.TestCase):
 +added
 """
         self.assertEqual(changed_new_lines(diff), {3, 4})
+
+    def test_changed_lines_by_side_keeps_deletions_on_old_side(self) -> None:
+        diff = """@@ -2,3 +2,3 @@
+ unchanged
+-old
++new
+ unchanged
+"""
+        self.assertEqual(changed_lines_by_side(diff), ({3}, {3}))
 
     def test_current_ticket_change_identifies_target_function(self) -> None:
         ticket_commit = subprocess.run(
