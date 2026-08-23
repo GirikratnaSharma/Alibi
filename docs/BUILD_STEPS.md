@@ -34,12 +34,13 @@ Standalone checkpoint command:
 python3 src/greptile_call_sites.py --function calculate_discount
 ```
 
-Because no Greptile API key is available yet, the checkpoint uses five manually
-verified call sites in `demo-repo/call-sites/calculate_discount.json`. The
-standalone script validates those locations against the checked-out source and
-emits structured JSON. The real Greptile query boundary is an explicit TODO
-that raises `NotImplementedError`; it does not fabricate a response. Replace
-the fallback only after a live query can be tested against the indexed repo.
+Live Greptile integration was attempted with valid Greptile and GitHub
+credentials, but the API currently returns HTTP 404 at its documented
+`https://api.greptile.com/v2/query` endpoint. Per the checkpoint discipline,
+the active path remains the five manually verified call sites in
+`demo-repo/call-sites/calculate_discount.json`. The standalone script validates
+those locations against the checked-out source and emits structured JSON; the
+live query remains available and falls back when the API request fails.
 
 ## Step 4 — Modal runs OLD vs NEW  *(high-risk unknown — test in isolation first)*
 - Two isolated sandboxes: one loads the pre-Codex function, one loads the post-Codex function

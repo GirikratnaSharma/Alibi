@@ -43,11 +43,11 @@ Pure functions only: same input → same output, no DB calls, no timestamps, no 
 
 ## Setup
 
-The current checkpoints use Python's standard library, so no package install is
-required. Run all local tests with:
+The test suite imports the pinned Modal dependency. Run it with the repository
+virtual environment, where Modal is installed, rather than bare `python3`:
 
 ```bash
-python3 -m unittest discover -s tests -v
+./.venv/bin/python -m unittest discover -s tests -v
 ```
 
 Step 3 currently uses the build plan's manual fallback because a Greptile API
