@@ -3,7 +3,7 @@
   "branch": "main",
   "function": "calculate_discount",
   "source": "hardcoded_fallback",
-  "reason": "Greptile API key is not available; these locations were manually verified.",
+  "reason": "Greptile deprecated its codebase Query API; these locations are the pipeline's manually verified source.",
   "call_sites": [
     {
       "path": "tests/test_pricing.py",

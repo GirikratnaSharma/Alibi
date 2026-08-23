@@ -22,11 +22,10 @@ Build or curate a small codebase with one clean **pure function** to modify — 
 - Confirm you can parse Codex's output: the diff, the new function body, which file/function it touched
 - Save the ticket text somewhere structured (e.g. `demo-repo/tickets/001.md`) — layer 6 needs it later to judge intent
 
-## Step 3 — Greptile finds real call sites  *(high-risk unknown — test in isolation first)*
-- Point Greptile's API at `demo-repo/`
-- Query for call sites of the target function
-- Confirm this works standalone, with a plain script, before wiring it into anything else
-- If it stalls: hardcode 3–5 representative call sites manually and move on — don't let this block step 4
+## Step 3 — Validated call-site evidence
+- Keep 3–5 representative call sites checked in and validate them against the source
+- Use those validated locations as the pipeline's sole call-site input
+- Keep Greptile PR review as a side-by-side comparison only; it never feeds the pipeline
 
 Standalone checkpoint command:
 
@@ -34,13 +33,12 @@ Standalone checkpoint command:
 python3 src/greptile_call_sites.py --function calculate_discount
 ```
 
-Live Greptile integration was attempted with valid Greptile and GitHub
-credentials, but the API currently returns HTTP 404 at its documented
-`https://api.greptile.com/v2/query` endpoint. Per the checkpoint discipline,
-the active path remains the five manually verified call sites in
-`demo-repo/call-sites/calculate_discount.json`. The standalone script validates
-those locations against the checked-out source and emits structured JSON; the
-live query remains available and falls back when the API request fails.
+Greptile deprecated its codebase Query API and directed the project to its PR
+review product. The pipeline therefore uses only the five manually verified
+call sites in `demo-repo/call-sites/calculate_discount.json`. The standalone
+script validates those locations against the checked-out source and emits
+structured JSON. Greptile PR review is demonstrated separately and does not
+provide pipeline input.
 
 ## Step 4 — Modal runs OLD vs NEW  *(high-risk unknown — test in isolation first)*
 - Two isolated sandboxes: one loads the pre-Codex function, one loads the post-Codex function
@@ -67,7 +65,7 @@ live query remains available and falls back when the API request fails.
 **Stop and demo-test here.** Once steps 1–7 work end to end on the hardcoded path, you have a complete, honest demo. Everything below is upside, not required.
 
 ## Step 8 — Only after 1–7 work end to end
-- Replace hardcoded test inputs with Greptile-driven usages fed through the LLM input-generator (from step 3's real call sites)
+- Keep Greptile PR review separate from the hardcoded Alibi pipeline
 - If time remains: wire in Claude-Mem so repeat verifications on similar code visibly recall prior context instead of starting cold — this is the "warm boot / speed" angle for the demo
 
 ## Guardrails (don't scope-creep into these during the hackathon)
