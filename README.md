@@ -35,6 +35,12 @@ Ticket (plain English)
 
 Pure functions only: same input → same output, no DB calls, no timestamps, no randomness, no network calls, no signature changes. This keeps every layer above unambiguously true.
 
+## Teammates
+
+- [Girikratna Sharma](https://github.com/GirikratnaSharma)
+- [Kartik Setti](https://github.com/karthikeyansett1)
+- [Hritik Munde](https://github.com/hritikmunde)
+
 ## Setup
 
 TBD — setup instructions will be added once the language/framework choices for the pipeline are finalized.
