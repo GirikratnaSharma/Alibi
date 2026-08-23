@@ -17,12 +17,13 @@ TICKET_PATH = Path("demo-repo/tickets/001-vip-order-discount.md")
 APP_NAME = "alibi-pricing-step-4"
 SANDBOX_TIMEOUT_SECONDS = 60
 
-# These are five examples already established in tests/test_pricing.py. No
+# These are six examples already established in tests/test_pricing.py. No
 # inputs are generated here.
 TEST_INPUTS: list[tuple[float, str, int]] = [
     (80.00, "regular", 2),
     (120.00, "member", 3),
     (200.00, "vip", 5),
+    (150.00, "member", 12),
     (100.00, "vip", 1),
     (101.00, "vip", 10),
 ]
