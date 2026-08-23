@@ -34,9 +34,9 @@ class CalculateDiscountTests(unittest.TestCase):
             (
                 (200.00, "vip", 5),
                 {
-                    "discount_rate": 0.15,
-                    "discount_amount": 30.0,
-                    "final_total": 170.0,
+                    "discount_rate": 0.2,
+                    "discount_amount": 40.0,
+                    "final_total": 160.0,
                 },
             ),
             (
@@ -54,6 +54,24 @@ class CalculateDiscountTests(unittest.TestCase):
                 self.assertEqual(
                     PRICING.calculate_discount(*arguments), expected
                 )
+
+    def test_vip_order_discount_boundary_and_cap(self) -> None:
+        self.assertEqual(
+            PRICING.calculate_discount(100.00, "vip", 1),
+            {
+                "discount_rate": 0.15,
+                "discount_amount": 15.0,
+                "final_total": 85.0,
+            },
+        )
+        self.assertEqual(
+            PRICING.calculate_discount(101.00, "vip", 10),
+            {
+                "discount_rate": 0.2,
+                "discount_amount": 20.2,
+                "final_total": 80.8,
+            },
+        )
 
     def test_same_input_always_returns_same_output(self) -> None:
         arguments = (150.00, "member", 12)
