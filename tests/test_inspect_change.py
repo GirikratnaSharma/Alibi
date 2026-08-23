@@ -1,6 +1,7 @@
 """Tests for structured generated-change inspection."""
 
 import sys
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -22,8 +23,25 @@ class InspectChangeTests(unittest.TestCase):
         self.assertEqual(changed_new_lines(diff), {3, 4})
 
     def test_current_ticket_change_identifies_target_function(self) -> None:
+        ticket_commit = subprocess.run(
+            [
+                "git",
+                "rev-list",
+                "-1",
+                "HEAD",
+                "--",
+                "demo-repo/tickets/001-vip-order-discount.md",
+            ],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
         change = inspect_change(
-            REPO_ROOT, "HEAD", Path("demo-repo/pricing.py")
+            REPO_ROOT,
+            f"{ticket_commit}^",
+            Path("demo-repo/pricing.py"),
+            target=ticket_commit,
         )
         changed_file = change["files"][0]
 

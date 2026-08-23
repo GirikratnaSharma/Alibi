@@ -41,25 +41,41 @@ def changed_new_lines(diff: str) -> set[int]:
     return changed
 
 
-def inspect_change(repo: Path, base: str, relative_path: Path) -> dict[str, object]:
+def inspect_change(
+    repo: Path,
+    base: str,
+    relative_path: Path,
+    target: str | None = None,
+) -> dict[str, object]:
     """Inspect a changed Python file relative to a Git revision."""
+    diff_command = [
+        "git",
+        "diff",
+        "--no-ext-diff",
+        "--unified=0",
+        base,
+    ]
+    if target is not None:
+        diff_command.append(target)
+    diff_command.extend(["--", relative_path.as_posix()])
     result = subprocess.run(
-        [
-            "git",
-            "diff",
-            "--no-ext-diff",
-            "--unified=0",
-            base,
-            "--",
-            relative_path.as_posix(),
-        ],
+        diff_command,
         cwd=repo,
         check=True,
         capture_output=True,
         text=True,
     )
     diff = result.stdout
-    source = (repo / relative_path).read_text()
+    if target is None:
+        source = (repo / relative_path).read_text()
+    else:
+        source = subprocess.run(
+            ["git", "show", f"{target}:{relative_path.as_posix()}"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
     tree = ast.parse(source)
     changed_lines = changed_new_lines(diff)
     functions = []
@@ -78,6 +94,7 @@ def inspect_change(repo: Path, base: str, relative_path: Path) -> dict[str, obje
 
     return {
         "base": base,
+        "target": target or "working-tree",
         "files": [
             {
                 "path": relative_path.as_posix(),
@@ -91,11 +108,17 @@ def inspect_change(repo: Path, base: str, relative_path: Path) -> dict[str, obje
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="HEAD")
+    parser.add_argument("--target")
     parser.add_argument("--path", required=True, type=Path)
     args = parser.parse_args()
 
     repo = Path(__file__).resolve().parents[1]
-    print(json.dumps(inspect_change(repo, args.base, args.path), indent=2))
+    print(
+        json.dumps(
+            inspect_change(repo, args.base, args.path, target=args.target),
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":
