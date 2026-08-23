@@ -12,7 +12,7 @@ def calculate_discount(
     - calculate_discount(120.00, "member", 3)
       -> {"discount_rate": 0.1, "discount_amount": 12.0, "final_total": 108.0}
     - calculate_discount(200.00, "vip", 5)
-      -> {"discount_rate": 0.15, "discount_amount": 30.0, "final_total": 170.0}
+      -> {"discount_rate": 0.2, "discount_amount": 40.0, "final_total": 160.0}
     - calculate_discount(150.00, "member", 12)
       -> {"discount_rate": 0.15, "discount_amount": 22.5, "final_total": 127.5}
     """
@@ -21,6 +21,9 @@ def calculate_discount(
         "member": 0.10,
         "vip": 0.15,
     }.get(customer_type, 0.00)
+
+    if customer_type == "vip" and order_total > 100:
+        discount_rate += 0.05
 
     if item_count >= 10:
         discount_rate += 0.05
