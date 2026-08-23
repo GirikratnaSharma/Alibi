@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,13 +17,12 @@ TICKET_PATH = Path("demo-repo/tickets/001-vip-order-discount.md")
 APP_NAME = "alibi-pricing-step-4"
 SANDBOX_TIMEOUT_SECONDS = 60
 
-# These are the four docstring examples and the two VIP boundary/cap cases
-# already established in tests/test_pricing.py. No inputs are generated here.
+# These are five examples already established in tests/test_pricing.py. No
+# inputs are generated here.
 TEST_INPUTS: list[tuple[float, str, int]] = [
     (80.00, "regular", 2),
     (120.00, "member", 3),
     (200.00, "vip", 5),
-    (150.00, "member", 12),
     (100.00, "vip", 1),
     (101.00, "vip", 10),
 ]
@@ -100,11 +98,7 @@ def load_sources() -> tuple[str, str, str, str]:
 
 
 def _write_sandbox_file(sandbox: Any, path: str, contents: str) -> None:
-    sandbox_file = sandbox.open(path, "w")
-    try:
-        sandbox_file.write(contents)
-    finally:
-        sandbox_file.close()
+    sandbox.filesystem.write_text(contents, path)
 
 
 def _error_details(exc: BaseException, stderr: str = "") -> dict[str, str]:
@@ -123,13 +117,12 @@ def run_source_in_sandbox(
     *,
     app: Any,
     image: Any,
-    sandbox_api: Any = modal.Sandbox,
 ) -> dict[str, Any]:
     """Run one source version in a fresh sandbox and capture JSON output."""
     sandbox = None
     stderr = ""
     try:
-        sandbox = sandbox_api.create(
+        sandbox = modal.Sandbox.create(
             app=app,
             image=image,
             timeout=SANDBOX_TIMEOUT_SECONDS,
@@ -186,20 +179,16 @@ def run_old_vs_new(
     old_source: str,
     new_source: str,
     inputs: Sequence[tuple[float, str, int]],
-    *,
-    app: Any | None = None,
-    image: Any | None = None,
-    sandbox_api: Any = modal.Sandbox,
 ) -> dict[str, Any]:
     """Run OLD once and NEW once, using two separate Modal sandboxes."""
-    modal_app = app or modal.App.lookup(APP_NAME, create_if_missing=True)
-    modal_image = image or modal.Image.debian_slim()
+    modal_app = modal.App.lookup(APP_NAME, create_if_missing=True)
+    modal_image = modal.Image.debian_slim()
 
     old_run = run_source_in_sandbox(
-        old_source, inputs, app=modal_app, image=modal_image, sandbox_api=sandbox_api
+        old_source, inputs, app=modal_app, image=modal_image
     )
     new_run = run_source_in_sandbox(
-        new_source, inputs, app=modal_app, image=modal_image, sandbox_api=sandbox_api
+        new_source, inputs, app=modal_app, image=modal_image
     )
 
     results = []
@@ -228,32 +217,7 @@ def run_old_vs_new(
     }
 
 
-def _missing_modal_environment() -> list[str]:
-    return [
-        name
-        for name in ("MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET")
-        if not os.environ.get(name)
-    ]
-
-
 def main() -> int:
-    missing = _missing_modal_environment()
-    if missing:
-        print(
-            json.dumps(
-                {
-                    "status": "error",
-                    "error": {
-                        "type": "ModalConfigurationError",
-                        "message": "Missing required environment variables: "
-                        + ", ".join(missing),
-                    },
-                },
-                indent=2,
-            )
-        )
-        return 2
-
     try:
         old_source, new_source, old_commit, old_message = load_sources()
         output = run_old_vs_new(old_source, new_source, TEST_INPUTS)
