@@ -59,6 +59,25 @@ class ClassifierPromptTests(unittest.TestCase):
         self.assertIn('"field": "discount_rate"', prompt)
         self.assertIn("additional 5 percentage-point discount", prompt)
 
+    def test_recalled_context_is_explicitly_advisory(self) -> None:
+        ticket = TICKET_PATH.read_text(encoding="utf-8")
+        prompt = build_prompt(
+            REAL_INTENDED_DIVERGENCES[0],
+            ticket,
+            input_evidence=VIP_INPUT,
+            recalled_context=[
+                {
+                    "function": "calculate_discount",
+                    "field": "discount_rate",
+                    "classification": "unintended",
+                }
+            ],
+        )
+
+        self.assertIn("advisory context only", prompt)
+        self.assertIn("Make your own", prompt)
+        self.assertIn('"classification": "unintended"', prompt)
+
 
 @unittest.skipUnless(
     LIVE_LLM_TESTS,

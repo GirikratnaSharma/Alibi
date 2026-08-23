@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Literal, Mapping
+from typing import Any, Literal, Mapping, Sequence
 
 
 Classification = Literal["intended", "unintended"]
@@ -34,6 +34,7 @@ def build_prompt(
     ticket_text: str,
     *,
     input_evidence: Mapping[str, Any] | None = None,
+    recalled_context: Sequence[Mapping[str, Any]] = (),
 ) -> str:
     """Build a prompt that judges intent without repeating comparison work."""
     required = {"field", "old_value", "new_value"}
@@ -53,6 +54,7 @@ def build_prompt(
             "new_present": divergence.get("new_present", True),
         },
     }
+    prior_judgments = [dict(item) for item in recalled_context]
     return f"""You are a narrow intent classifier for a confirmed code-behavior divergence.
 
 The deterministic diff engine has already established the exact OLD and NEW
@@ -61,6 +63,10 @@ Do not inspect code, files, tests, or any outside context.
 
 Judge only whether this confirmed field change is requested by, or is a direct
 necessary consequence of, the original ticket.
+
+Prior judgments, when supplied, are advisory context only. Make your own
+judgment from the current ticket and confirmed divergence. Never copy or defer
+to a prior classification when it conflicts with the current ticket.
 
 - Return `intended` when it matches the requested behavior.
 - Return `unintended` when it is outside the request or contradicts behavior
@@ -74,6 +80,9 @@ Original ticket:
 Confirmed evidence:
 {json.dumps(evidence, indent=2, sort_keys=True)}
 
+Prior judgments for a similar function/field/value shape:
+{json.dumps(prior_judgments, indent=2, sort_keys=True)}
+
 Return only the JSON object required by the supplied output schema.
 """
 
@@ -83,6 +92,7 @@ def classify_divergence(
     ticket_text: str,
     *,
     input_evidence: Mapping[str, Any] | None = None,
+    recalled_context: Sequence[Mapping[str, Any]] = (),
     codex_executable: str | None = None,
 ) -> Classification:
     """Classify one confirmed divergence with an ephemeral Codex invocation."""
@@ -94,6 +104,7 @@ def classify_divergence(
         divergence,
         ticket_text,
         input_evidence=input_evidence,
+        recalled_context=recalled_context,
     )
     with tempfile.TemporaryDirectory(prefix="alibi-classifier-") as directory:
         workdir = Path(directory)

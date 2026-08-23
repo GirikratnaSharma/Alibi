@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Literal, Mapping, Sequence
 
+from src.claude_memory import ClaudeMemClient
 from src.diff_engine import compare_results
 from src.divergence_classifier import Classification, classify_divergence
 from src.greptile_call_sites import load_hardcoded_call_sites
@@ -24,6 +25,7 @@ from src.modal_runner import (
 
 Verdict = Literal["auto-approve", "flag"]
 Classifier = Callable[..., Classification]
+MemoryClient = ClaudeMemClient
 
 
 def aggregate_verdict(
@@ -32,6 +34,7 @@ def aggregate_verdict(
     inputs_tested: int,
     run_errors: Sequence[Mapping[str, Any]] = (),
     run_status: Mapping[str, Any] | None = None,
+    recalled_context: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Aggregate classifications and errors without making judgments itself."""
     divergences = [dict(item) for item in classified_divergences]
@@ -76,6 +79,7 @@ def aggregate_verdict(
             "run_errors": len(errors),
         },
         "run_status": dict(run_status or {}),
+        "recalled_context": [dict(item) for item in recalled_context],
         "divergences": divergences,
         "flagged_evidence": flagged_evidence,
         "run_errors": errors,
@@ -120,8 +124,13 @@ def _run_errors(modal_output: Mapping[str, Any]) -> list[dict[str, Any]]:
     return errors
 
 
-def run_pipeline(*, classifier: Classifier = classify_divergence) -> dict[str, Any]:
+def run_pipeline(
+    *,
+    classifier: Classifier = classify_divergence,
+    memory: MemoryClient | None = None,
+) -> dict[str, Any]:
     """Run the checked-in ticket through the complete hardcoded 1–7 path."""
+    memory = memory or ClaudeMemClient()
     ticket_text = (REPOSITORY_ROOT / TICKET_PATH).read_text(encoding="utf-8")
     call_sites = load_hardcoded_call_sites(
         REPOSITORY_ROOT, "calculate_discount"
@@ -148,6 +157,7 @@ def run_pipeline(*, classifier: Classifier = classify_divergence) -> dict[str, A
     modal_output = run_old_vs_new(old_source, new_source, TEST_INPUTS)
     errors = _run_errors(modal_output)
     classified: list[dict[str, Any]] = []
+    recalled_context: list[dict[str, Any]] = []
 
     if not errors:
         comparisons = compare_results(modal_output["results"])
@@ -162,12 +172,40 @@ def run_pipeline(*, classifier: Classifier = classify_divergence) -> dict[str, A
                     "new_present": divergence["new_present"],
                 }
                 try:
+                    recall = memory.recall(
+                        function="calculate_discount",
+                        divergence=divergence,
+                    )
+                except Exception as exc:
+                    recall = {
+                        "status": "unavailable",
+                        "matches": [],
+                        "reason": f"{type(exc).__name__}: {exc}",
+                    }
+                recalled_context.append(
+                    {
+                        "function": "calculate_discount",
+                        "field": divergence["field"],
+                        **recall,
+                    }
+                )
+                try:
                     evidence["classification"] = classifier(
                         divergence,
                         ticket_text,
                         input_evidence=comparison["input"],
+                        recalled_context=recall["matches"],
                     )
                     classified.append(evidence)
+                    try:
+                        memory.store(
+                            function="calculate_discount",
+                            divergence=divergence,
+                            ticket_reference=str(TICKET_PATH),
+                            classification=evidence["classification"],
+                        )
+                    except Exception:
+                        pass
                 except Exception as exc:
                     errors.append(
                         {
@@ -188,6 +226,7 @@ def run_pipeline(*, classifier: Classifier = classify_divergence) -> dict[str, A
         inputs_tested=len(TEST_INPUTS),
         run_errors=errors,
         run_status=modal_output.get("runs", {}),
+        recalled_context=recalled_context,
     )
     report["pipeline"] = {
         "ticket": str(TICKET_PATH),
@@ -248,6 +287,14 @@ def format_report(report: Mapping[str, Any]) -> str:
             f"  Modal NEW: {report['run_status'].get('new', {}).get('status', 'unknown')}",
             f"  Divergences: {counts['divergences']} "
             f"({counts['intended']} intended, {counts['unintended']} unintended)",
+            "  Memory: "
+            + (
+                ", ".join(
+                    f"{item['field']}={item['status']}"
+                    for item in report.get("recalled_context", [])
+                )
+                or "cold_start"
+            ),
         ]
     )
 
