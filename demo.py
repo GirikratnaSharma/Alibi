@@ -206,6 +206,15 @@ def _fields(values: Mapping[str, Any]) -> str:
     return ", ".join(f"{key}={_value(value)}" for key, value in values.items())
 
 
+def _confirmed_divergences(result: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Flatten deterministic evidence independently of LLM classification."""
+    confirmed: list[dict[str, Any]] = []
+    for comparison in result.get("comparisons", []):
+        for divergence in comparison.get("divergences", []):
+            confirmed.append({"input": comparison["input"], **divergence})
+    return confirmed
+
+
 def format_demo(result: Mapping[str, Any]) -> str:
     """Render a stage-friendly narrative rather than a JSON payload."""
     report = result["report"]
@@ -243,11 +252,12 @@ def format_demo(result: Mapping[str, Any]) -> str:
             ]
         )
 
-    divergences = report["divergences"]
+    confirmed_divergences = _confirmed_divergences(result)
+    classified_divergences = report["divergences"]
     lines.extend(["", "CONFIRMED DIVERGENCES", "---------------------"])
-    if not divergences:
+    if not confirmed_divergences:
         lines.append("None.")
-    for index, item in enumerate(divergences, start=1):
+    for index, item in enumerate(confirmed_divergences, start=1):
         lines.extend(
             [
                 f"{index}. Input: {_fields(item['input'])}",
@@ -258,9 +268,12 @@ def format_demo(result: Mapping[str, Any]) -> str:
 
     recalls = report.get("recalled_context", [])
     lines.extend(["", "CLASSIFICATIONS", "---------------"])
-    if not divergences:
-        lines.append("No divergence needed classification.")
-    for index, item in enumerate(divergences, start=1):
+    if not classified_divergences:
+        if confirmed_divergences:
+            lines.append("No classifications completed; see run errors below.")
+        else:
+            lines.append("No divergence needed classification.")
+    for index, item in enumerate(classified_divergences, start=1):
         recall = recalls[index - 1] if index <= len(recalls) else {}
         memory_note = (
             f"{len(recall.get('matches', []))} prior verdict(s) recalled"

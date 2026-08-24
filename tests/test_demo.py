@@ -45,6 +45,21 @@ class DemoTests(unittest.TestCase):
                     "new_output": {"discount_rate": 0.05},
                 }
             ],
+            "comparisons": [
+                {
+                    "input": evidence["input"],
+                    "equal": False,
+                    "divergences": [
+                        {
+                            "field": "discount_rate",
+                            "old_value": 0.0,
+                            "new_value": 0.05,
+                            "old_present": True,
+                            "new_present": True,
+                        }
+                    ],
+                }
+            ],
             "report": {
                 "verdict": "flag",
                 "summary": "Flagged because 1 divergence was unintended.",
@@ -72,6 +87,68 @@ class DemoTests(unittest.TestCase):
         self.assertIn("!!! FLAG — HUMAN REVIEW REQUIRED !!!", rendered)
         self.assertIn("discount_rate: 0.0 -> 0.05", rendered)
         self.assertNotIn('{"verdict":', rendered)
+
+    def test_confirmed_divergence_survives_classification_failure(self) -> None:
+        input_evidence = {
+            "order_total": 80.0,
+            "customer_type": "regular",
+            "item_count": 2,
+        }
+        result = {
+            "scenario": "regression",
+            "ticket_text": "Only change qualifying VIP orders.",
+            "modal_results": [
+                {
+                    "input": input_evidence,
+                    "old_output": {"discount_rate": 0.0},
+                    "new_output": {"discount_rate": 0.05},
+                }
+            ],
+            "comparisons": [
+                {
+                    "input": input_evidence,
+                    "equal": False,
+                    "divergences": [
+                        {
+                            "field": "discount_rate",
+                            "old_value": 0.0,
+                            "new_value": 0.05,
+                            "old_present": True,
+                            "new_present": True,
+                        }
+                    ],
+                }
+            ],
+            "report": {
+                "verdict": "flag",
+                "summary": "Flagged because classification failed.",
+                "pipeline": {
+                    "generated_change": {
+                        "commit": "31dd30e",
+                        "file": "demo-repo/pricing.py",
+                        "functions": ["calculate_discount"],
+                    }
+                },
+                "divergences": [],
+                "flagged_evidence": [],
+                "recalled_context": [],
+                "run_errors": [
+                    {
+                        "stage": "classification",
+                        "error": {
+                            "type": "RuntimeError",
+                            "message": "Codex CLI is required",
+                        },
+                    }
+                ],
+            },
+        }
+
+        rendered = format_demo(result)
+
+        self.assertIn("discount_rate: 0.0 -> 0.05", rendered)
+        self.assertNotIn("CONFIRMED DIVERGENCES\n---------------------\nNone.", rendered)
+        self.assertIn("classification: RuntimeError", rendered)
 
 
 if __name__ == "__main__":

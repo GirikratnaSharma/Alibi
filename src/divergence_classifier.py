@@ -7,6 +7,7 @@ evidence from the deterministic diff engine and never re-runs that comparison.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -15,6 +16,8 @@ from typing import Any, Literal, Mapping, Sequence
 
 
 Classification = Literal["intended", "unintended"]
+CODEX_EXECUTABLE_ENV = "ALIBI_CODEX_EXECUTABLE"
+MACOS_APP_CODEX = Path("/Applications/ChatGPT.app/Contents/Resources/codex")
 
 OUTPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -96,9 +99,18 @@ def classify_divergence(
     codex_executable: str | None = None,
 ) -> Classification:
     """Classify one confirmed divergence with an ephemeral Codex invocation."""
-    executable = codex_executable or shutil.which("codex")
+    executable = (
+        codex_executable
+        or os.environ.get(CODEX_EXECUTABLE_ENV)
+        or shutil.which("codex")
+    )
+    if not executable and MACOS_APP_CODEX.is_file():
+        executable = str(MACOS_APP_CODEX)
     if not executable:
-        raise RuntimeError("Codex CLI is required for divergence classification")
+        raise RuntimeError(
+            "Codex CLI is required for divergence classification. Install it "
+            "or set ALIBI_CODEX_EXECUTABLE to the full codex binary path."
+        )
 
     prompt = build_prompt(
         divergence,
