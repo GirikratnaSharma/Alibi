@@ -41,6 +41,36 @@ def changed_new_lines(diff: str) -> set[int]:
     return changed
 
 
+def changed_lines_by_side(diff: str) -> tuple[set[int], set[int]]:
+    """Return OLD and NEW line numbers changed by a unified diff."""
+    old_changed: set[int] = set()
+    new_changed: set[int] = set()
+    old_line: int | None = None
+    new_line: int | None = None
+
+    for line in diff.splitlines():
+        match = re.match(
+            r"^@@ -(?P<old>\d+)(?:,\d+)? \+(?P<new>\d+)(?:,\d+)? @@",
+            line,
+        )
+        if match:
+            old_line = int(match.group("old"))
+            new_line = int(match.group("new"))
+            continue
+        if old_line is None or new_line is None or line.startswith(("+++", "---")):
+            continue
+        if line.startswith("+"):
+            new_changed.add(new_line)
+            new_line += 1
+        elif line.startswith("-"):
+            old_changed.add(old_line)
+            old_line += 1
+        else:
+            old_line += 1
+            new_line += 1
+    return old_changed, new_changed
+
+
 def inspect_change(
     repo: Path,
     base: str,
